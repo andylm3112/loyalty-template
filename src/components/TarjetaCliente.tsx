@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import confetti from 'canvas-confetti'
 import { supabase } from '../lib/supabase'
+import { COLOR_PRIMARIO, COLOR_SECUNDARIO, INSTAGRAM, NOMBRE_NEGOCIO, PUNTOS_META, SLOGAN, WHATSAPP } from '../config'
 import type { Cliente, CuponCliente } from '../types'
 
 interface Props {
   cliente: Cliente
   onVolver: () => void
 }
-
-const PUNTOS_META = 10
 
 function pseudoRandom(seed: number) {
   const x = Math.sin(seed) * 10000
@@ -32,13 +31,13 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
       await verificarExpiracionPuntos()
       await cargarCupones()
 
-      if (cliente.puntos === 10) {
+      if (cliente.puntos === PUNTOS_META) {
         setTimeout(() => {
           confetti({
             particleCount: 150,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#3c4142', '#11196d', '#f0f0f0'],
+            colors: [COLOR_SECUNDARIO, COLOR_PRIMARIO, '#f0f0f0'],
           })
         }, 500)
       }
@@ -100,7 +99,7 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
   }
 
   const puntos = cliente.puntos || 0
-  const qrUrl = `${import.meta.env.VITE_APP_DOMAIN}/scan/${cliente.id}`
+  const qrUrl = `${import.meta.env.VITE_APP_DOMAIN || '{{VITE_APP_DOMAIN}}'}/scan/${cliente.id}`
 
   const estrellasStyles = useMemo(() => {
     return Array.from({ length: puntos }, (_, i) => {
@@ -126,8 +125,8 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <img src="/no_bg_image.png" alt="ELEVEN CE STUDIOS" className="h-24 mx-auto" />
-          <p className="text-gray-400 mt-2">Tarjeta de Fidelidad</p>
+          <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-24 mx-auto" />
+          <p className="text-gray-400 mt-2">{SLOGAN}</p>
         </div>
 
         {/* Tarjeta principal */}
@@ -196,6 +195,15 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
             ))}
           </div>
         )}
+
+        <div className="flex justify-center gap-6 mb-6 text-sm">
+          <a href={WHATSAPP} target="_blank" rel="noreferrer" className="text-secondary hover:underline">
+            WhatsApp
+          </a>
+          <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="text-secondary hover:underline">
+            Instagram
+          </a>
+        </div>
 
         {/* Botón volver */}
         <button

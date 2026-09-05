@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { NOMBRE_NEGOCIO } from '../config'
 import { useAdmin } from '../hooks/useAdmin'
 import { supabase } from '../lib/supabase'
 
@@ -112,7 +113,7 @@ export default function AdminPanel() {
       const { data: negocio, error: negocioError } = await supabase
         .from('negocios')
         .select('id')
-        .eq('nombre', 'ELEVEN CE STUDIOS')
+        .eq('nombre', NOMBRE_NEGOCIO)
         .single()
 
       if (negocioError) throw negocioError
@@ -204,7 +205,7 @@ export default function AdminPanel() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <img src="/no_bg_image.png" alt="ELEVEN CE STUDIOS" className="h-24 mx-auto" />
+            <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-24 mx-auto" />
             <p className="text-gray-400 mt-2">Panel de Administración</p>
             <p className="text-sm text-gray-500">
               Sesión: {admin.email} ({admin.rol})

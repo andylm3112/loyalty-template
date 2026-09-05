@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { INSTAGRAM, NOMBRE_NEGOCIO, SLOGAN, WHATSAPP } from '../config'
 import TarjetaCliente from './TarjetaCliente'
 import type { Cliente } from '../types'
 
@@ -95,7 +96,7 @@ export default function ClienteHome() {
       const { data: negocios, error: errorNegocio } = await supabase
         .from('negocios')
         .select('id')
-        .eq('nombre', 'ELEVEN CE STUDIOS')
+        .eq('nombre', NOMBRE_NEGOCIO)
         .limit(1)
 
       if (errorNegocio) throw errorNegocio
@@ -157,7 +158,8 @@ export default function ClienteHome() {
       <div className="min-h-screen text-light flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <img src="/no_bg_image.png" alt="ELEVEN CE STUDIOS" className="h-20 mx-auto mb-4" />
+            <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-4" />
+            <p className="text-gray-400">{SLOGAN}</p>
             <p className="text-gray-400">Completa tu registro</p>
             <p className="text-sm text-zinc-500 mt-2">Teléfono: {telefono}</p>
           </div>
@@ -215,6 +217,15 @@ export default function ClienteHome() {
               ← Volver a buscar con otro teléfono
             </button>
           </form>
+
+          <div className="flex justify-center gap-6 mt-6 text-sm">
+            <a href={WHATSAPP} target="_blank" rel="noreferrer" className="text-secondary hover:underline">
+              WhatsApp
+            </a>
+            <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="text-secondary hover:underline">
+              Instagram
+            </a>
+          </div>
         </div>
       </div>
     )
@@ -224,8 +235,9 @@ export default function ClienteHome() {
     <div className="min-h-screen text-light flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/no_bg_image.png" alt="ELEVEN CE STUDIOS" className="h-20 mx-auto mb-4" />
-          <p className="text-gray-400">Ingresa tu teléfono para ver tu tarjeta de lealtad</p>
+          <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-4" />
+          <p className="text-gray-400">{SLOGAN}</p>
+          <p className="text-gray-400 mt-2">Ingresa tu teléfono para ver tu tarjeta de lealtad</p>
         </div>
 
         <form onSubmit={buscarCliente} className="bg-primary/90 border border-secondary rounded-lg p-8 shadow-primary">
@@ -263,6 +275,15 @@ export default function ClienteHome() {
             {loading ? 'Buscando...' : 'Continuar'}
           </button>
         </form>
+
+        <div className="flex justify-center gap-6 mt-6 text-sm">
+          <a href={WHATSAPP} target="_blank" rel="noreferrer" className="text-secondary hover:underline">
+            WhatsApp
+          </a>
+          <a href={INSTAGRAM} target="_blank" rel="noreferrer" className="text-secondary hover:underline">
+            Instagram
+          </a>
+        </div>
       </div>
     </div>
   )

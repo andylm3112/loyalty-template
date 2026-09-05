@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import confetti from 'canvas-confetti'
+import { COLOR_PRIMARIO, COLOR_SECUNDARIO, NOMBRE_NEGOCIO, PUNTOS_META, SLOGAN } from '../config'
 import type { Admin, Cliente, CuponCliente } from '../types'
 
 type ClienteConNegocio = Cliente & { negocio_id: string }
@@ -249,12 +250,12 @@ export default function ScanPage() {
       setCliente(clienteActualizado)
       setMensaje('✅ Visita añadida correctamente')
 
-      if (nuevosPuntos === 10) {
+      if (nuevosPuntos === PUNTOS_META) {
         confetti({
           particleCount: 100,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#3c4142', '#11196d', '#f0f0f0']
+          colors: [COLOR_SECUNDARIO, COLOR_PRIMARIO, '#f0f0f0']
         })
       }
 
@@ -307,7 +308,7 @@ export default function ScanPage() {
           particleCount: 150,
           spread: 100,
           origin: { y: 0.6 },
-          colors: ['#3c4142', '#11196d', '#f0f0f0']
+          colors: [COLOR_SECUNDARIO, COLOR_PRIMARIO, '#f0f0f0']
         })
 
         // Recargar cupones
@@ -341,7 +342,7 @@ export default function ScanPage() {
         puntos_al_canjear: cliente.puntos
       })
 
-      // Si es el corte gratis (visita 10), resetear puntos
+      // Si es el corte gratis (visita {{PUNTOS_META}}), resetear puntos
       if (tipo === 'producto_gratis') {
         const { data: clienteActualizado } = await supabase
           .from('clientes')
@@ -359,7 +360,7 @@ export default function ScanPage() {
         particleCount: 150,
         spread: 100,
         origin: { y: 0.6 },
-        colors: ['#3c4142', '#11196d', '#f0f0f0']
+        colors: [COLOR_SECUNDARIO, COLOR_PRIMARIO, '#f0f0f0']
       })
 
       // Recargar cupones
@@ -416,14 +417,15 @@ export default function ScanPage() {
     )
   }
 
-  const circulos = Array.from({ length: 10 }, (_, i) => i < cliente.puntos)
+  const circulos = Array.from({ length: PUNTOS_META }, (_, i) => i < cliente.puntos)
 
   return (
     <div className="min-h-screen text-light p-6">
       <div className="max-w-2xl mx-auto">
         {/* Encabezado */}
         <div className="text-center mb-8">
-          <h1 className="font-[Palace Script] text-4xl text-primary mb-2">ELEVEN CE STUDIOS</h1>
+          <h1 className="font-[Palace Script] text-4xl text-primary mb-2">{NOMBRE_NEGOCIO}</h1>
+          <p className="text-gray-400">{SLOGAN}</p>
           <p className="text-gray-400">Panel de Administrador</p>
         </div>
 
@@ -465,12 +467,12 @@ export default function ScanPage() {
               ))}
             </div>
             <div className="text-center text-sm text-gray-400">
-              {cliente.puntos} / 10 visitas
+              {cliente.puntos} / {PUNTOS_META} visitas
             </div>
           </div>
 
           {/* Botón Añadir Visita */}
-          {cliente.puntos < 10 && (
+          {cliente.puntos < PUNTOS_META && (
             <button
               onClick={handleAddVisit}
               disabled={disabled}

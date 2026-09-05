@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { NOMBRE_NEGOCIO, SLOGAN } from '../config'
 import { supabase } from '../lib/supabase'
 
 export default function AdminLoginPage() {
@@ -81,7 +82,8 @@ export default function AdminLoginPage() {
     <div className="min-h-screen text-light flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-[Palace Script] text-4xl text-primary mb-2">ELEVEN CE STUDIOS</h1>
+          <h1 className="font-[Palace Script] text-4xl text-primary mb-2">{NOMBRE_NEGOCIO}</h1>
+          <p className="text-gray-400">{SLOGAN}</p>
           <p className="text-gray-400">Panel de Administración</p>
         </div>
 

@@ -1,6 +1,6 @@
 # eleven-ce-loyalty
 
-App de fidelización para **ELEVEN CE STUDIOS** (React + TypeScript + Vite + Supabase).
+App de fidelización para **{{NOMBRE_NEGOCIO}}** (React + TypeScript + Vite + Supabase).
 
 ## Desarrollo
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Crea `.env.local` con `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` y `VITE_APP_DOMAIN` (no lo subas a Git).
+Crea `.env.local` con `VITE_SUPABASE_URL={{VITE_SUPABASE_URL}}`, `VITE_SUPABASE_ANON_KEY={{VITE_SUPABASE_ANON_KEY}}` y `VITE_APP_DOMAIN={{VITE_APP_DOMAIN}}` (no lo subas a Git). Puedes copiar `.env.example`.
 
 ## Build
 
