@@ -2,7 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import confetti from 'canvas-confetti'
 import { supabase } from '../lib/supabase'
-import { COLOR_PRIMARIO, COLOR_SECUNDARIO, INSTAGRAM, NOMBRE_NEGOCIO, PUNTOS_META, SLOGAN, WHATSAPP } from '../config'
+import {
+  COLOR_PRIMARIO,
+  COLOR_SECUNDARIO,
+  COLOR_FONDO,
+  LOGO_URL,
+  BANNER_URL,
+  INSTAGRAM,
+  NOMBRE_NEGOCIO,
+  PUNTOS_META,
+  SLOGAN,
+  WHATSAPP,
+} from '../config'
 import type { Cliente, CuponCliente } from '../types'
 
 interface Props {
@@ -15,11 +26,19 @@ function pseudoRandom(seed: number) {
   return x - Math.floor(x)
 }
 
+// Fallbacks por si el prototipo no subió logo/banner al generarse
+const LOGO_DEFAULT = '/no_bg_image.png'
+const ESTRELLA_DEFAULT = '/no_bg_image (1).png'
+
 export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Props) {
   const [cliente, setCliente] = useState(clienteInicial)
   const [cupones, setCupones] = useState<CuponCliente[]>([])
   const [loading, setLoading] = useState(true)
   const [mensajeExpiracion, setMensajeExpiracion] = useState<string | null>(null)
+
+  const logoSrc = LOGO_URL && !LOGO_URL.startsWith('{{') ? LOGO_URL : LOGO_DEFAULT
+  const bannerSrc = BANNER_URL && !BANNER_URL.startsWith('{{') ? BANNER_URL : null
+  const colorFondo = COLOR_FONDO && !COLOR_FONDO.startsWith('{{') ? COLOR_FONDO : null
 
   useEffect(() => {
     verificarYCargarDatos()
@@ -112,20 +131,31 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
 
   const circulosRestantes = Math.max(PUNTOS_META - puntos, 0)
 
+  const estiloFondo: React.CSSProperties = bannerSrc
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${bannerSrc})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }
+    : colorFondo
+    ? { backgroundColor: colorFondo }
+    : {}
+
   if (loading) {
     return (
-      <div className="min-h-screen text-light flex items-center justify-center">
+      <div className="min-h-screen text-light flex items-center justify-center" style={estiloFondo}>
         <div className="animate-spin h-12 w-12 border-4 border-secondary border-t-transparent rounded-full"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen text-light p-6">
+    <div className="min-h-screen text-light p-6" style={estiloFondo}>
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-24 mx-auto" />
+          <img src={logoSrc} alt={NOMBRE_NEGOCIO} className="h-24 mx-auto object-contain" />
           <p className="text-gray-400 mt-2">{SLOGAN}</p>
         </div>
 
@@ -154,7 +184,7 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
               {estrellasStyles.map(({ rotation, scale }, i) => (
                 <img
                   key={`estrella-${i}`}
-                  src="/no_bg_image (1).png"
+                  src={ESTRELLA_DEFAULT}
                   alt={`Estrella ${i + 1}`}
                   className="w-16 h-16 object-contain"
                   style={{ transform: `rotate(${rotation.toFixed(1)}deg) scale(${scale.toFixed(2)})` }}
