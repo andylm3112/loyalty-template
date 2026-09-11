@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { INSTAGRAM, NOMBRE_NEGOCIO, SLOGAN, WHATSAPP } from '../config'
+import { BANNER_URL, COLOR_FONDO, INSTAGRAM, LOGO_URL, NOMBRE_NEGOCIO, SLOGAN, WHATSAPP } from '../config'
 import TarjetaCliente from './TarjetaCliente'
 import type { Cliente } from '../types'
+
+const LOGO_DEFAULT = '/no_bg_image.png'
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err instanceof Error) return err.message
@@ -33,6 +35,21 @@ export default function ClienteHome() {
 
   const [negocioActivo, setNegocioActivo] = useState<boolean | null>(null)
 
+  const logoSrc = LOGO_URL && !LOGO_URL.startsWith('{{') ? LOGO_URL : LOGO_DEFAULT
+  const bannerSrc = BANNER_URL && !BANNER_URL.startsWith('{{') ? BANNER_URL : null
+  const colorFondo = COLOR_FONDO && !COLOR_FONDO.startsWith('{{') ? COLOR_FONDO : null
+
+  const estiloFondo: React.CSSProperties = bannerSrc
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${bannerSrc})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }
+    : colorFondo
+    ? { backgroundColor: colorFondo }
+    : {}
+
   useEffect(() => {
     void verificarNegocioActivo()
   }, [])
@@ -46,7 +63,6 @@ export default function ClienteHome() {
       .maybeSingle()
 
     if (error || !data) {
-      // si no podemos verificar, dejamos pasar para no bloquear por error de red
       setNegocioActivo(true)
       return
     }
@@ -174,7 +190,7 @@ export default function ClienteHome() {
 
   if (negocioActivo === null) {
     return (
-      <div className="min-h-screen text-light flex items-center justify-center">
+      <div className="min-h-screen text-light flex items-center justify-center" style={estiloFondo}>
         <div className="animate-spin h-12 w-12 border-4 border-secondary border-t-transparent rounded-full"></div>
       </div>
     )
@@ -182,9 +198,9 @@ export default function ClienteHome() {
 
   if (negocioActivo === false) {
     return (
-      <div className="min-h-screen text-light flex items-center justify-center p-6">
+      <div className="min-h-screen text-light flex items-center justify-center p-6" style={estiloFondo}>
         <div className="max-w-md w-full text-center">
-          <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-6" />
+          <img src={logoSrc} alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-6 object-contain" />
           <div className="bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
             <p className="text-red-300 font-bold">Este servicio no está disponible actualmente.</p>
           </div>
@@ -199,10 +215,10 @@ export default function ClienteHome() {
 
   if (mostrarFormularioRegistro) {
     return (
-      <div className="min-h-screen text-light flex items-center justify-center p-6">
+      <div className="min-h-screen text-light flex items-center justify-center p-6" style={estiloFondo}>
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-4" />
+            <img src={logoSrc} alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-4 object-contain" />
             <p className="text-gray-400">{SLOGAN}</p>
             <p className="text-gray-400">Completa tu registro</p>
             <p className="text-sm text-zinc-500 mt-2">Teléfono: {telefono}</p>
@@ -276,10 +292,10 @@ export default function ClienteHome() {
   }
 
   return (
-    <div className="min-h-screen text-light flex items-center justify-center p-6">
+    <div className="min-h-screen text-light flex items-center justify-center p-6" style={estiloFondo}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-4" />
+          <img src={logoSrc} alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-4 object-contain" />
           <p className="text-gray-400">{SLOGAN}</p>
           <p className="text-gray-400 mt-2">Ingresa tu teléfono para ver tu tarjeta de lealtad</p>
         </div>
