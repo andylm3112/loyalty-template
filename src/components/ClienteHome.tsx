@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { INSTAGRAM, NOMBRE_NEGOCIO, SLOGAN, WHATSAPP } from '../config'
 import TarjetaCliente from './TarjetaCliente'
@@ -30,6 +30,29 @@ export default function ClienteHome() {
   const [mostrarFormularioRegistro, setMostrarFormularioRegistro] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [negocioActivo, setNegocioActivo] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    void verificarNegocioActivo()
+  }, [])
+
+  const verificarNegocioActivo = async () => {
+    const { data, error } = await supabase
+      .from('negocios')
+      .select('activo')
+      .eq('nombre', NOMBRE_NEGOCIO)
+      .limit(1)
+      .maybeSingle()
+
+    if (error || !data) {
+      // si no podemos verificar, dejamos pasar para no bloquear por error de red
+      setNegocioActivo(true)
+      return
+    }
+
+    setNegocioActivo(data.activo !== false)
+  }
 
   const buscarCliente = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,6 +170,27 @@ export default function ClienteHome() {
     setNombre('')
     setReferidoPor('')
     setError(null)
+  }
+
+  if (negocioActivo === null) {
+    return (
+      <div className="min-h-screen text-light flex items-center justify-center">
+        <div className="animate-spin h-12 w-12 border-4 border-secondary border-t-transparent rounded-full"></div>
+      </div>
+    )
+  }
+
+  if (negocioActivo === false) {
+    return (
+      <div className="min-h-screen text-light flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center">
+          <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-20 mx-auto mb-6" />
+          <div className="bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
+            <p className="text-red-300 font-bold">Este servicio no está disponible actualmente.</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (cliente) {
