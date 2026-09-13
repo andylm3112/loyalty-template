@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import confetti from 'canvas-confetti'
 import { supabase } from '../lib/supabase'
@@ -21,14 +21,8 @@ interface Props {
   onVolver: () => void
 }
 
-function pseudoRandom(seed: number) {
-  const x = Math.sin(seed) * 10000
-  return x - Math.floor(x)
-}
-
-// Fallbacks por si el prototipo no subió logo/banner al generarse
+// Fallback por si el prototipo no subió logo al generarse
 const LOGO_DEFAULT = '/no_bg_image.png'
-const ESTRELLA_DEFAULT = '/no_bg_image (1).png'
 
 export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Props) {
   const [cliente, setCliente] = useState(clienteInicial)
@@ -120,17 +114,6 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
   const puntos = cliente.puntos || 0
   const qrUrl = `${import.meta.env.VITE_APP_DOMAIN || '{{VITE_APP_DOMAIN}}'}/scan/${cliente.id}`
 
-  const estrellasStyles = useMemo(() => {
-    return Array.from({ length: puntos }, (_, i) => {
-      const seed = cliente.id.charCodeAt(0) + i * 31
-      const rotation = -15 + pseudoRandom(seed) * 30
-      const scale = 0.9 + pseudoRandom(seed + 7) * 0.2
-      return { rotation, scale }
-    })
-  }, [puntos, cliente.id])
-
-  const circulosRestantes = Math.max(PUNTOS_META - puntos, 0)
-
   const estiloFondo: React.CSSProperties = bannerSrc
     ? {
         backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${bannerSrc})`,
@@ -174,7 +157,7 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
             </div>
           )}
 
-                        {/* Progreso */}
+          {/* Progreso */}
           <div className="mb-8">
             <p className="text-center text-2xl font-bold mb-4" style={{ color: COLOR_SECUNDARIO }}>
               {cliente.puntos} / {PUNTOS_META} visitas
