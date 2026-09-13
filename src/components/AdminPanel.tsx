@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { NOMBRE_NEGOCIO } from '../config'
+import { LOGO_URL, NOMBRE_NEGOCIO } from '../config'
 import { useAdmin } from '../hooks/useAdmin'
 import { supabase } from '../lib/supabase'
 
@@ -25,6 +25,8 @@ interface Admin {
   rol: string
 }
 
+const LOGO_DEFAULT = '/no_bg_image.png'
+
 function getErrorMessage(err: unknown, fallback: string) {
   if (err instanceof Error) return err.message
   if (typeof err === 'object' && err !== null && 'message' in err) {
@@ -42,6 +44,8 @@ export default function AdminPanel() {
   const [admins, setAdmins] = useState<Admin[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const logoSrc = LOGO_URL && !LOGO_URL.startsWith('{{') ? LOGO_URL : LOGO_DEFAULT
 
   // Formulario agregar admin
   const [nuevoEmail, setNuevoEmail] = useState('')
@@ -119,7 +123,6 @@ export default function AdminPanel() {
       if (negocioError) throw negocioError
       if (!negocio) throw new Error('Negocio no encontrado')
 
-      // Verificar que el email no exista
       const { data: existente, error: existenteError } = await supabase
         .from('administradores')
         .select('id')
@@ -205,7 +208,7 @@ export default function AdminPanel() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-24 mx-auto" />
+            <img src={logoSrc} alt={NOMBRE_NEGOCIO} className="h-24 mx-auto object-contain" />
             <p className="text-gray-400 mt-2">Panel de Administración</p>
             <p className="text-sm text-gray-500">
               Sesión: {admin.email} ({admin.rol})
