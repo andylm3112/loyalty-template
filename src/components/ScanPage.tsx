@@ -27,6 +27,7 @@ export default function ScanPage() {
   const [cuponesCliente, setCuponesCliente] = useState<CuponCliente[]>([])
   const [disabled, setDisabled] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
+  const [negocioInactivo, setNegocioInactivo] = useState(false)
 
   useEffect(() => {
     void verificarYCargar()
@@ -96,6 +97,21 @@ export default function ScanPage() {
     return data as ClienteConNegocio
   }
 
+  async function verificarNegocioActivo(negocioId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('negocios')
+      .select('activo')
+      .eq('id', negocioId)
+      .maybeSingle()
+
+    if (error || !data) {
+      // si no se puede verificar, dejamos pasar para no bloquear por error de red
+      return true
+    }
+
+    return data.activo !== false
+  }
+
   async function verificarYCargar() {
     setLoading(true)
     setError(null)
@@ -126,6 +142,13 @@ export default function ScanPage() {
 
     const clienteData = await cargarClientePorId(clienteId)
     if (!clienteData) {
+      setLoading(false)
+      return
+    }
+
+    const activo = await verificarNegocioActivo(clienteData.negocio_id)
+    if (!activo) {
+      setNegocioInactivo(true)
       setLoading(false)
       return
     }
@@ -384,6 +407,19 @@ export default function ScanPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-secondary border-t-transparent mx-auto mb-4"></div>
           <p className="text-light">Cargando cliente...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (negocioInactivo) {
+    return (
+      <div className="min-h-screen text-light flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold mb-4">{NOMBRE_NEGOCIO}</h1>
+          <div className="bg-red-900/20 border-2 border-red-500 rounded-lg p-6">
+            <p className="text-red-300 font-bold">Este servicio no está disponible actualmente.</p>
+          </div>
         </div>
       </div>
     )

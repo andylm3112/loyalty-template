@@ -1,8 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import confetti from 'canvas-confetti'
 import { supabase } from '../lib/supabase'
-import { COLOR_PRIMARIO, COLOR_SECUNDARIO, INSTAGRAM, NOMBRE_NEGOCIO, PUNTOS_META, SLOGAN, WHATSAPP } from '../config'
+import {
+  COLOR_PRIMARIO,
+  COLOR_SECUNDARIO,
+  COLOR_FONDO,
+  LOGO_URL,
+  BANNER_URL,
+  INSTAGRAM,
+  NOMBRE_NEGOCIO,
+  PUNTOS_META,
+  SLOGAN,
+  WHATSAPP,
+} from '../config'
 import type { Cliente, CuponCliente } from '../types'
 
 interface Props {
@@ -10,16 +21,18 @@ interface Props {
   onVolver: () => void
 }
 
-function pseudoRandom(seed: number) {
-  const x = Math.sin(seed) * 10000
-  return x - Math.floor(x)
-}
+// Fallback por si el prototipo no subió logo al generarse
+const LOGO_DEFAULT = '/no_bg_image.png'
 
 export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Props) {
   const [cliente, setCliente] = useState(clienteInicial)
   const [cupones, setCupones] = useState<CuponCliente[]>([])
   const [loading, setLoading] = useState(true)
   const [mensajeExpiracion, setMensajeExpiracion] = useState<string | null>(null)
+
+  const logoSrc = LOGO_URL && !LOGO_URL.startsWith('{{') ? LOGO_URL : LOGO_DEFAULT
+  const bannerSrc = BANNER_URL && !BANNER_URL.startsWith('{{') ? BANNER_URL : null
+  const colorFondo = COLOR_FONDO && !COLOR_FONDO.startsWith('{{') ? COLOR_FONDO : null
 
   useEffect(() => {
     verificarYCargarDatos()
@@ -101,31 +114,31 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
   const puntos = cliente.puntos || 0
   const qrUrl = `${import.meta.env.VITE_APP_DOMAIN || '{{VITE_APP_DOMAIN}}'}/scan/${cliente.id}`
 
-  const estrellasStyles = useMemo(() => {
-    return Array.from({ length: puntos }, (_, i) => {
-      const seed = cliente.id.charCodeAt(0) + i * 31
-      const rotation = -15 + pseudoRandom(seed) * 30
-      const scale = 0.9 + pseudoRandom(seed + 7) * 0.2
-      return { rotation, scale }
-    })
-  }, [puntos, cliente.id])
-
-  const circulosRestantes = Math.max(PUNTOS_META - puntos, 0)
+  const estiloFondo: React.CSSProperties = bannerSrc
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${bannerSrc})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }
+    : colorFondo
+    ? { backgroundColor: colorFondo }
+    : {}
 
   if (loading) {
     return (
-      <div className="min-h-screen text-light flex items-center justify-center">
+      <div className="min-h-screen text-light flex items-center justify-center" style={estiloFondo}>
         <div className="animate-spin h-12 w-12 border-4 border-secondary border-t-transparent rounded-full"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen text-light p-6">
+    <div className="min-h-screen text-light p-6" style={estiloFondo}>
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <img src="/no_bg_image.png" alt={NOMBRE_NEGOCIO} className="h-24 mx-auto" />
+          <img src={logoSrc} alt={NOMBRE_NEGOCIO} className="h-24 mx-auto object-contain" />
           <p className="text-gray-400 mt-2">{SLOGAN}</p>
         </div>
 
@@ -146,22 +159,18 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
 
           {/* Progreso */}
           <div className="mb-8">
-            <p className="text-center text-2xl font-bold mb-4 text-[#D4AF37]">
-              Has sido elevado a {cliente.puntos} estrellas
+            <p className="text-center text-2xl font-bold mb-4" style={{ color: COLOR_SECUNDARIO }}>
+              {cliente.puntos} / {PUNTOS_META} visitas
             </p>
 
             <div className="flex gap-2 flex-wrap justify-center items-center">
-              {estrellasStyles.map(({ rotation, scale }, i) => (
-                <img
-                  key={`estrella-${i}`}
-                  src="/no_bg_image (1).png"
-                  alt={`Estrella ${i + 1}`}
-                  className="w-16 h-16 object-contain"
-                  style={{ transform: `rotate(${rotation.toFixed(1)}deg) scale(${scale.toFixed(2)})` }}
+              {Array.from({ length: PUNTOS_META }, (_, i) => (
+                <div
+                  key={`circulo-${i}`}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                    i < puntos ? 'bg-secondary border-secondary' : 'bg-transparent border-secondary/40'
+                  }`}
                 />
-              ))}
-              {Array.from({ length: circulosRestantes }, (_, i) => (
-                <div key={`pendiente-${i}`} className="w-4 h-4 rounded-full bg-gray-500" />
               ))}
             </div>
           </div>
