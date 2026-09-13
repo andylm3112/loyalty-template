@@ -174,10 +174,10 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
             </div>
           )}
 
-          {/* Progreso */}
+                 {/* Progreso */}
           <div className="mb-8">
             <p className="text-center text-2xl font-bold mb-4 text-[#D4AF37]">
-              Has sido elevado a {cliente.puntos} estrellas
+              {cliente.puntos} / {PUNTOS_META} visitas
             </p>
 
             <div className="flex gap-2 flex-wrap justify-center items-center">
