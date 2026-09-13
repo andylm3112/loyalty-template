@@ -174,24 +174,20 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
             </div>
           )}
 
-                 {/* Progreso */}
+                        {/* Progreso */}
           <div className="mb-8">
-                       <p className="text-center text-2xl font-bold mb-4" style={{ color: COLOR_SECUNDARIO }}>
+            <p className="text-center text-2xl font-bold mb-4" style={{ color: COLOR_SECUNDARIO }}>
               {cliente.puntos} / {PUNTOS_META} visitas
             </p>
 
             <div className="flex gap-2 flex-wrap justify-center items-center">
-              {estrellasStyles.map(({ rotation, scale }, i) => (
-                <img
-                  key={`estrella-${i}`}
-                  src={ESTRELLA_DEFAULT}
-                  alt={`Estrella ${i + 1}`}
-                  className="w-16 h-16 object-contain"
-                  style={{ transform: `rotate(${rotation.toFixed(1)}deg) scale(${scale.toFixed(2)})` }}
+              {Array.from({ length: PUNTOS_META }, (_, i) => (
+                <div
+                  key={`circulo-${i}`}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                    i < puntos ? 'bg-secondary border-secondary' : 'bg-transparent border-secondary/40'
+                  }`}
                 />
-              ))}
-              {Array.from({ length: circulosRestantes }, (_, i) => (
-                <div key={`pendiente-${i}`} className="w-4 h-4 rounded-full bg-gray-500" />
               ))}
             </div>
           </div>
