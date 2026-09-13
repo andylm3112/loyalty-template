@@ -176,7 +176,7 @@ export default function TarjetaCliente({ cliente: clienteInicial, onVolver }: Pr
 
                  {/* Progreso */}
           <div className="mb-8">
-            <p className="text-center text-2xl font-bold mb-4 text-[#D4AF37]">
+                       <p className="text-center text-2xl font-bold mb-4" style={{ color: COLOR_SECUNDARIO }}>
               {cliente.puntos} / {PUNTOS_META} visitas
             </p>
 
