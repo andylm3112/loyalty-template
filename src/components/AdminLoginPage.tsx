@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { NOMBRE_NEGOCIO, SLOGAN } from '../config'
+import { LOGO_URL, NOMBRE_NEGOCIO, SLOGAN } from '../config'
 import { supabase } from '../lib/supabase'
+
+const LOGO_DEFAULT = '/no_bg_image.png'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -9,6 +11,8 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
+
+  const logoSrc = LOGO_URL && !LOGO_URL.startsWith('{{') ? LOGO_URL : LOGO_DEFAULT
 
   useEffect(() => {
     const checkSession = async () => {
@@ -82,7 +86,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen text-light flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="font-[Palace Script] text-4xl text-primary mb-2">{NOMBRE_NEGOCIO}</h1>
+          <img src={logoSrc} alt={NOMBRE_NEGOCIO} className="h-24 mx-auto object-contain mb-2" />
           <p className="text-gray-400">{SLOGAN}</p>
           <p className="text-gray-400">Panel de Administración</p>
         </div>
