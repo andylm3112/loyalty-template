@@ -28,11 +28,17 @@ export default function ScanPage() {
   const [disabled, setDisabled] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [negocioInactivo, setNegocioInactivo] = useState(false)
+  const [waLink, setWaLink] = useState<string | null>(null)
 
   useEffect(() => {
     void verificarYCargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recarga al cambiar clienteId
   }, [clienteId])
+
+  function construirLinkWhatsapp(telefono: string, texto: string): string {
+    const soloDigitos = telefono.replace(/\D/g, '')
+    return `https://wa.me/${soloDigitos}?text=${encodeURIComponent(texto)}`
+  }
 
   async function verificarSesion(): Promise<'login' | 'error' | string> {
     const {
@@ -224,6 +230,7 @@ export default function ScanPage() {
     setDisabled(true)
     setMensaje(null)
     setError(null)
+    setWaLink(null)
 
     let advertenciaDemo = ''
 
@@ -272,6 +279,11 @@ export default function ScanPage() {
 
       setCliente(clienteActualizado)
       setMensaje(`${advertenciaDemo}✅ Visita añadida correctamente`)
+
+      if (cliente.telefono) {
+        const textoWa = `¡Ya llevas ${nuevosPuntos}/${PUNTOS_META} visitas en ${NOMBRE_NEGOCIO}! Sigue así 🎉`
+        setWaLink(construirLinkWhatsapp(cliente.telefono, textoWa))
+      }
 
       if (nuevosPuntos === PUNTOS_META) {
         confetti({
@@ -346,6 +358,7 @@ export default function ScanPage() {
     setDisabled(true)
     setMensaje(null)
     setError(null)
+    setWaLink(null)
 
     try {
       // Marcar cupón como canjeado
@@ -378,6 +391,11 @@ export default function ScanPage() {
       }
 
       setMensaje('🎁 ¡Cupón canjeado exitosamente!')
+
+      if (cliente.telefono) {
+        const textoWa = `¡Felicidades! Canjeaste tu premio en ${NOMBRE_NEGOCIO} 🎁`
+        setWaLink(construirLinkWhatsapp(cliente.telefono, textoWa))
+      }
       
       confetti({
         particleCount: 150,
@@ -476,6 +494,18 @@ export default function ScanPage() {
           <div className="bg-red-900/20 border-2 border-red-500 rounded-lg p-4 mb-6">
             <p className="text-red-400 text-center">{error}</p>
           </div>
+        )}
+
+        {/* Botón WhatsApp post-acción */}
+        {waLink && (
+          <a
+            href={waLink}
+            target="_blank"
+            rel="noreferrer"
+            className="block text-center bg-green-700 hover:bg-green-600 text-light font-bold py-3 px-6 rounded-lg transition mb-6"
+          >
+            📲 Avisar por WhatsApp
+          </a>
         )}
 
         {/* Tarjeta del Cliente */}
