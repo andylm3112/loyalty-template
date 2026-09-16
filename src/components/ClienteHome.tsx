@@ -5,6 +5,7 @@ import TarjetaCliente from './TarjetaCliente'
 import type { Cliente } from '../types'
 
 const LOGO_DEFAULT = '/no_bg_image.png'
+const LIMITE_REFERIDOS_POR_MES = 5
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err instanceof Error) return err.message
@@ -126,6 +127,65 @@ export default function ClienteHome() {
     }
   }
 
+  /**
+   * Resuelve el id del cliente referente a partir del teléfono capturado en el
+   * formulario, aplicando las reglas anti-abuso:
+   * - Auto-referido (mismo teléfono) → sin premio
+   * - Teléfono inventado (no existe en clientes) → sin premio
+   * - Teléfono pertenece a un administrador → sin premio
+   * - Referente ya alcanzó su límite mensual de referidos → sin premio
+   * Devuelve null si no aplica ningún premio de referido.
+   */
+  const resolverReferenteId = async (
+    telefonoReferido: string,
+    telefonoPropio: string,
+    negocioId: string
+  ): Promise<string | null> => {
+    const telReferidoDigits = normalizarTelefono(telefonoReferido)
+
+    if (!telReferidoDigits || telReferidoDigits === telefonoPropio) {
+      return null
+    }
+
+    const { data: adminsConEseTelefono } = await supabase
+      .from('administradores')
+      .select('id')
+      .eq('telefono', telReferidoDigits)
+      .limit(1)
+
+    if (adminsConEseTelefono && adminsConEseTelefono.length > 0) {
+      return null
+    }
+
+    const { data: referentes } = await supabase
+      .from('clientes')
+      .select('id')
+      .eq('telefono', telReferidoDigits)
+      .eq('negocio_id', negocioId)
+      .limit(1)
+
+    const referente = referentes?.[0]
+    if (!referente) {
+      return null
+    }
+
+    const primerDiaMes = new Date()
+    primerDiaMes.setDate(1)
+    primerDiaMes.setHours(0, 0, 0, 0)
+
+    const { count } = await supabase
+      .from('clientes')
+      .select('*', { count: 'exact', head: true })
+      .eq('referido_por', referente.id)
+      .gte('created_at', primerDiaMes.toISOString())
+
+    if ((count || 0) >= LIMITE_REFERIDOS_POR_MES) {
+      return null
+    }
+
+    return referente.id
+  }
+
   const registrarCliente = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -145,14 +205,17 @@ export default function ClienteHome() {
         throw new Error('Negocio no encontrado')
       }
 
+      const telefonoNormalizado = normalizarTelefono(telefono)
+      const referenteId = await resolverReferenteId(referidoPor, telefonoNormalizado, negocio.id)
+
       const { data: nuevosClientes, error: errorRegistro } = await supabase
         .from('clientes')
         .insert({
           negocio_id: negocio.id,
           nombre: nombre.trim(),
-          telefono: normalizarTelefono(telefono),
+          telefono: telefonoNormalizado,
           puntos: 0,
-          referido_por: referidoPor.trim() || null,
+          referido_por: referenteId,
         })
         .select()
 
@@ -242,16 +305,20 @@ export default function ClienteHome() {
 
             <div className="mb-6">
               <label htmlFor="referidoPor" className="block text-sm font-medium mb-2">
-                Referido por (opcional)
+                ¿Quién te recomendó? (opcional)
               </label>
               <input
                 id="referidoPor"
-                type="text"
+                type="tel"
+                inputMode="tel"
                 value={referidoPor}
-                onChange={(e) => setReferidoPor(e.target.value)}
+                onChange={(e) => setReferidoPor(e.target.value.replace(/\D/g, ''))}
                 className="w-full px-4 py-3 bg-primary border border-secondary/60 rounded focus:border-secondary focus:outline-none text-light"
-                placeholder="Teléfono o nombre"
+                placeholder="Teléfono de quien te recomendó"
               />
+              <p className="text-xs text-zinc-500 mt-2">
+                Si un cliente te recomendó, ambos ganan un punto extra en tu primera visita
+              </p>
             </div>
 
             {error && (
