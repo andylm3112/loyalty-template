@@ -25,6 +25,12 @@ interface Admin {
   rol: string
 }
 
+interface Metricas {
+  totalClientes: number
+  visitasMes: number
+  premiosMes: number
+}
+
 const LOGO_DEFAULT = '/no_bg_image.png'
 
 function getErrorMessage(err: unknown, fallback: string) {
@@ -42,6 +48,7 @@ export default function AdminPanel() {
 
   const [premios, setPremios] = useState<Premio[]>([])
   const [admins, setAdmins] = useState<Admin[]>([])
+  const [metricas, setMetricas] = useState<Metricas | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -67,6 +74,66 @@ export default function AdminPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recarga cuando cambia el usuario admin
   }, [admin])
 
+  const cargarMetricas = async () => {
+    try {
+      const { data: negocio, error: negocioError } = await supabase
+        .from('negocios')
+        .select('id')
+        .eq('nombre', NOMBRE_NEGOCIO)
+        .single()
+
+      if (negocioError || !negocio) {
+        setMetricas(null)
+        return
+      }
+
+      const { count: totalClientes } = await supabase
+        .from('clientes')
+        .select('*', { count: 'exact', head: true })
+        .eq('negocio_id', negocio.id)
+
+      const { data: clientesDelNegocio } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('negocio_id', negocio.id)
+
+      const idsClientes = (clientesDelNegocio || []).map((c) => c.id)
+
+      const primerDiaMes = new Date()
+      primerDiaMes.setDate(1)
+      primerDiaMes.setHours(0, 0, 0, 0)
+
+      let visitasMes = 0
+      let premiosMes = 0
+
+      if (idsClientes.length > 0) {
+        const { count: visitasCount } = await supabase
+          .from('historial_visitas')
+          .select('*', { count: 'exact', head: true })
+          .in('cliente_id', idsClientes)
+          .gte('fecha', primerDiaMes.toISOString())
+
+        const { count: premiosCount } = await supabase
+          .from('historial_premios')
+          .select('*', { count: 'exact', head: true })
+          .in('cliente_id', idsClientes)
+          .gte('fecha', primerDiaMes.toISOString())
+
+        visitasMes = visitasCount || 0
+        premiosMes = premiosCount || 0
+      }
+
+      setMetricas({
+        totalClientes: totalClientes || 0,
+        visitasMes,
+        premiosMes,
+      })
+    } catch (err) {
+      console.error('Error cargando métricas:', err)
+      setMetricas(null)
+    }
+  }
+
   const cargarDatos = async () => {
     try {
       setLoading(true)
@@ -86,6 +153,8 @@ export default function AdminPanel() {
 
       if (premiosError) throw premiosError
       setPremios((premiosData || []) as unknown as Premio[])
+
+      await cargarMetricas()
 
       if (admin?.rol === 'dueño') {
         const { data: adminsData, error: adminsError } = await supabase
@@ -224,6 +293,24 @@ export default function AdminPanel() {
 
         {error && (
           <div className="mb-6 p-4 bg-red-900/20 border border-red-500 rounded text-red-200">{error}</div>
+        )}
+
+        {/* Resumen / métricas */}
+        {metricas && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-primary/90 border border-secondary rounded-lg p-6 text-center shadow-primary">
+              <p className="text-4xl font-bold text-secondary">{metricas.totalClientes}</p>
+              <p className="text-sm text-gray-400 mt-2">Clientes totales</p>
+            </div>
+            <div className="bg-primary/90 border border-secondary rounded-lg p-6 text-center shadow-primary">
+              <p className="text-4xl font-bold text-secondary">{metricas.visitasMes}</p>
+              <p className="text-sm text-gray-400 mt-2">Visitas este mes</p>
+            </div>
+            <div className="bg-primary/90 border border-secondary rounded-lg p-6 text-center shadow-primary">
+              <p className="text-4xl font-bold text-secondary">{metricas.premiosMes}</p>
+              <p className="text-sm text-gray-400 mt-2">Premios canjeados este mes</p>
+            </div>
+          </div>
         )}
 
         <div className="bg-primary/90 border border-secondary rounded-lg p-6 mb-6 shadow-primary">
