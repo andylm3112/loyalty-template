@@ -225,16 +225,16 @@ export default function ScanPage() {
     setMensaje(null)
     setError(null)
 
+    let advertenciaDemo = ''
+
     try {
-      // Verificar máximo 1 punto por día
+      // MODO DEMO: ya no bloqueamos si ya hubo visita hoy, solo advertimos y seguimos
       if (cliente.ultima_visita) {
         const hoy = new Date().toDateString()
         const ultimaVisita = new Date(cliente.ultima_visita).toDateString()
-        
+
         if (hoy === ultimaVisita) {
-          setError('⚠️ Ya se sumó una visita hoy. Máximo 1 punto por día.')
-          setTimeout(() => setDisabled(false), 3000)
-          return
+          advertenciaDemo = '⚠️ Este cliente ya sumó visita hoy — sumando de todas formas (modo demo). '
         }
       }
 
@@ -271,7 +271,7 @@ export default function ScanPage() {
       await verificarCupon(totalVisitas, clienteActualizado)
 
       setCliente(clienteActualizado)
-      setMensaje('✅ Visita añadida correctamente')
+      setMensaje(`${advertenciaDemo}✅ Visita añadida correctamente`)
 
       if (nuevosPuntos === PUNTOS_META) {
         confetti({
