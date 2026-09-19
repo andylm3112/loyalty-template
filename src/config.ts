@@ -8,3 +8,4 @@ export const BANNER_URL: string = '{{BANNER_URL}}'
 export const PUNTOS_META: number = Number('{{PUNTOS_META}}') || 4
 export const WHATSAPP: string = '{{WHATSAPP}}'
 export const INSTAGRAM: string = '{{INSTAGRAM}}'
+export const MODO_DEMO: boolean = String('{{MODO_DEMO}}') === 'true'

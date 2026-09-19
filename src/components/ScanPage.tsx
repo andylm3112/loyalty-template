@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import confetti from 'canvas-confetti'
-import { COLOR_PRIMARIO, COLOR_SECUNDARIO, NOMBRE_NEGOCIO, PUNTOS_META, SLOGAN } from '../config'
+import { COLOR_PRIMARIO, COLOR_SECUNDARIO, NOMBRE_NEGOCIO, PUNTOS_META, SLOGAN, MODO_DEMO } from '../config'
 import type { Admin, Cliente, CuponCliente } from '../types'
 
 type ClienteConNegocio = Cliente & { negocio_id: string }
@@ -241,7 +241,12 @@ export default function ScanPage() {
         const ultimaVisita = new Date(cliente.ultima_visita).toDateString()
 
         if (hoy === ultimaVisita) {
-          advertenciaDemo = '⚠️ Este cliente ya sumó visita hoy — sumando de todas formas (modo demo). '
+          if (!MODO_DEMO) {
+            setError('Este cliente ya sumo visita hoy. Maximo 1 visita por dia.')
+            setDisabled(false)
+            return
+          }
+          advertenciaDemo = '\u26A0\uFE0F Este cliente ya sum\u00F3 visita hoy \u2014 sumando de todas formas (modo demo). '
         }
       }
 
@@ -443,7 +448,7 @@ export default function ScanPage() {
     )
   }
 
-  if (error || !cliente) {
+  if (!cliente) {
     return (
       <div className="min-h-screen text-light flex items-center justify-center p-6">
         <div className="max-w-md w-full">
