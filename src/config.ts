@@ -5,6 +5,6 @@ export const COLOR_SECUNDARIO: string = '{{COLOR_SECUNDARIO}}'
 export const COLOR_FONDO: string = '{{COLOR_FONDO}}'
 export const LOGO_URL: string = '{{LOGO_URL}}'
 export const BANNER_URL: string = '{{BANNER_URL}}'
-export const PUNTOS_META = {{PUNTOS_META}}
+export const PUNTOS_META: number = Number('{{PUNTOS_META}}') || 4
 export const WHATSAPP: string = '{{WHATSAPP}}'
 export const INSTAGRAM: string = '{{INSTAGRAM}}'
