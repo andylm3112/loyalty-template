@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        light: 'var(--color-light)',
+        primary: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+        secondary: 'rgb(var(--color-secondary-rgb) / <alpha-value>)',
+        light: 'rgb(var(--color-light-rgb) / <alpha-value>)',
       },
       fontFamily: {
         palace: ['Palace Script MT', 'Palace Script', 'cursive'],
