@@ -159,13 +159,23 @@ export default function ScanPage() {
       return
     }
 
-    await verificarExpiracionPuntos(clienteData)
+    const clienteVigente = await verificarExpiracionPuntos(clienteData)
+
+    // Reparación: si completó la tarjeta y no tiene el premio final pendiente
+    // (p. ej. por el bug anterior), se le entrega ahora para que pueda canjearlo.
+    if (clienteVigente.puntos >= PUNTOS_META) {
+      const ganados = await otorgarCuponesDeLaVuelta(clienteVigente, PUNTOS_META)
+      if (ganados.length > 0) {
+        setMensaje(`🎉 Tarjeta completa: se entregó ${ganados.join(', ')}. ¡Ya puede canjearlo!`)
+      }
+    }
+
     await cargarCuponesCliente(clienteData.id)
 
     setLoading(false)
   }
 
-  async function verificarExpiracionPuntos(clienteData: ClienteConNegocio) {
+  async function verificarExpiracionPuntos(clienteData: ClienteConNegocio): Promise<ClienteConNegocio> {
     // Obtener configuración del negocio
     const { data: negocio } = await supabase
       .from('negocios')
@@ -175,7 +185,7 @@ export default function ScanPage() {
 
     if (!negocio || !negocio.dias_expiracion || !clienteData.ultima_visita) {
       setCliente(clienteData)
-      return
+      return clienteData
     }
 
     const hoy = new Date()
@@ -191,11 +201,14 @@ export default function ScanPage() {
         .select()
         .single()
 
+      const vigente = (clienteActualizado as ClienteConNegocio | null) || { ...clienteData, puntos: 0 }
       setMensaje('⚠️ Los puntos de este cliente expiraron por inactividad')
-      setCliente(clienteActualizado || { ...clienteData, puntos: 0 })
-    } else {
-      setCliente(clienteData)
+      setCliente(vigente)
+      return vigente
     }
+
+    setCliente(clienteData)
+    return clienteData
   }
 
   async function cargarCuponesCliente(clienteId: string) {
@@ -224,6 +237,11 @@ export default function ScanPage() {
     }
   }
 
+  // Premio final pendiente = cupón vigente cuyo hito es la meta (o más)
+  function tienePremioFinalPendiente() {
+    return cuponesCliente.some((cc) => (cc.cupones?.visita_requerida ?? 0) >= PUNTOS_META)
+  }
+
   async function handleAddVisit() {
     if (!cliente || !admin) return
 
@@ -235,6 +253,15 @@ export default function ScanPage() {
     let advertenciaDemo = ''
 
     try {
+      // Tarjeta llena: si tiene el premio final pendiente, primero se canjea.
+      // Si el negocio no configuró premio en la meta, empieza una vuelta nueva.
+      const tarjetaLlena = cliente.puntos >= PUNTOS_META
+      if (tarjetaLlena && tienePremioFinalPendiente()) {
+        setError('🏆 Este cliente ya completó su tarjeta. Canjea su premio para empezar una nueva vuelta.')
+        setTimeout(() => setDisabled(false), 3000)
+        return
+      }
+
       // MODO DEMO: ya no bloqueamos si ya hubo visita hoy, solo advertimos y seguimos
       if (cliente.ultima_visita) {
         const hoy = new Date().toDateString()
@@ -251,7 +278,7 @@ export default function ScanPage() {
       }
 
       // Sumar punto
-      const nuevosPuntos = cliente.puntos + 1
+      const nuevosPuntos = (tarjetaLlena ? 0 : cliente.puntos) + 1
       const { data: clienteActualizado, error: updateError } = await supabase
         .from('clientes')
         .update({ 
@@ -264,26 +291,23 @@ export default function ScanPage() {
 
       if (updateError) throw updateError
 
-      // Insertar en historial
-      await supabase.from('historial_visitas').insert({
+      // Insertar en historial (registro de quién sumó la visita)
+      const { error: historialError } = await supabase.from('historial_visitas').insert({
         cliente_id: cliente.id,
         admin_id: admin.id,
         puntos_sumados: 1
       })
+      if (historialError) console.error('No se pudo guardar el historial de la visita:', historialError)
 
-      // Contar total de visitas
-      const { count } = await supabase
-        .from('historial_visitas')
-        .select('*', { count: 'exact', head: true })
-        .eq('cliente_id', cliente.id)
-
-      const totalVisitas = (count || 0) + 1 // +1 por la que acabamos de añadir
-
-      // Verificar si se activa un cupón
-      await verificarCupon(totalVisitas, clienteActualizado)
+      // Premios de esta vuelta: se deciden por los puntos actuales (1 a PUNTOS_META), no por el total histórico
+      const ganados = await otorgarCuponesDeLaVuelta(clienteActualizado as ClienteConNegocio, nuevosPuntos)
 
       setCliente(clienteActualizado)
-      setMensaje(`${advertenciaDemo}✅ Visita añadida correctamente`)
+      setMensaje(
+        ganados.length > 0
+          ? `${advertenciaDemo}✅ Visita añadida. 🎉 ¡Ganó: ${ganados.join(', ')}!`
+          : `${advertenciaDemo}✅ Visita añadida correctamente`
+      )
 
       if (cliente.telefono) {
         const textoWa = `¡Ya llevas ${nuevosPuntos}/${PUNTOS_META} visitas en ${NOMBRE_NEGOCIO}! Sigue así 🎉`
@@ -311,53 +335,74 @@ export default function ScanPage() {
     }
   }
 
-  async function verificarCupon(totalVisitas: number, clienteData: ClienteConNegocio) {
-    // Buscar cupón para este hito de visitas
-    const { data: cupones } = await supabase
+  // Entrega los cupones cuyo hito coincide con los puntos de la vuelta actual.
+  // Un cupón ya canjeado o caducado se puede volver a ganar en la siguiente vuelta;
+  // solo se omite si el cliente tiene uno igual pendiente y vigente.
+  // Devuelve los nombres de los cupones entregados.
+  async function otorgarCuponesDeLaVuelta(clienteData: ClienteConNegocio, puntosVuelta: number): Promise<string[]> {
+    const ganados: string[] = []
+    const { data: cupones, error: cuponesError } = await supabase
       .from('cupones')
       .select('*')
       .eq('negocio_id', clienteData.negocio_id)
-      .eq('visita_requerida', totalVisitas)
+      .eq('visita_requerida', puntosVuelta)
       .eq('activo', true)
 
-    if (cupones && cupones.length > 0) {
-      const cupon = cupones[0]
-      
-      // Verificar si ya tiene este cupón
-      const { data: existente } = await supabase
+    if (cuponesError) {
+      console.error('Error buscando cupones:', cuponesError)
+      return ganados
+    }
+
+    for (const cupon of cupones ?? []) {
+      const { data: pendientes, error: pendientesError } = await supabase
         .from('cupones_clientes')
-        .select('*')
+        .select('id, fecha_expiracion')
         .eq('cliente_id', clienteData.id)
         .eq('cupon_id', cupon.id)
-        .single()
+        .eq('canjeado', false)
 
-      if (!existente) {
-        // Otorgar cupón
-        const fechaExpiracion = new Date()
-        fechaExpiracion.setDate(fechaExpiracion.getDate() + (cupon.dias_validez || 30))
-
-        await supabase.from('cupones_clientes').insert({
-          cliente_id: clienteData.id,
-          cupon_id: cupon.id,
-          fecha_expiracion: fechaExpiracion.toISOString()
-        })
-
-        setMensaje(`🎉 ¡Felicidades! Ganaste: ${cupon.nombre}`)
-        
-        confetti({
-          particleCount: 150,
-          spread: 100,
-          origin: { y: 0.6 },
-          colors: [COLOR_SECUNDARIO, COLOR_PRIMARIO, '#f0f0f0']
-        })
-
-        // Recargar cupones
-        await cargarCuponesCliente(clienteData.id)
+      if (pendientesError) {
+        console.error('Error revisando cupones del cliente:', pendientesError)
+        continue
       }
+
+      const ahora = new Date()
+      const tieneVigente = (pendientes ?? []).some(
+        (p) => !p.fecha_expiracion || new Date(p.fecha_expiracion) > ahora
+      )
+      if (tieneVigente) continue
+
+      const fechaExpiracion = new Date()
+      fechaExpiracion.setDate(fechaExpiracion.getDate() + (cupon.dias_validez || 30))
+
+      const { error: insertError } = await supabase.from('cupones_clientes').insert({
+        cliente_id: clienteData.id,
+        cupon_id: cupon.id,
+        fecha_expiracion: fechaExpiracion.toISOString()
+      })
+
+      if (insertError) {
+        setError(`No se pudo entregar el cupón ${cupon.nombre}: ${insertError.message}`)
+        continue
+      }
+
+      ganados.push(cupon.nombre)
     }
+
+    if (ganados.length > 0) {
+      confetti({
+        particleCount: 150,
+        spread: 100,
+        origin: { y: 0.6 },
+        colors: [COLOR_SECUNDARIO, COLOR_PRIMARIO, '#f0f0f0']
+      })
+    }
+
+    await cargarCuponesCliente(clienteData.id)
+    return ganados
   }
 
-  async function handleCanjearCupon(cuponClienteId: string, cuponId: string, tipo: string) {
+  async function handleCanjearCupon(cuponClienteId: string, cuponId: string, visitaRequerida: number) {
     if (!cliente || !admin) return
 
     setDisabled(true)
@@ -366,32 +411,42 @@ export default function ScanPage() {
     setWaLink(null)
 
     try {
-      // Marcar cupón como canjeado
-      await supabase
+      // Marcar cupón como canjeado. Solo si sigue pendiente, para que un doble
+      // toque o dos dispositivos no lo canjeen dos veces.
+      const { data: marcados, error: canjeError } = await supabase
         .from('cupones_clientes')
-        .update({ 
-          canjeado: true, 
-          fecha_canje: new Date().toISOString() 
+        .update({
+          canjeado: true,
+          fecha_canje: new Date().toISOString()
         })
         .eq('id', cuponClienteId)
+        .eq('canjeado', false)
+        .select('id')
+
+      if (canjeError) throw canjeError
+      if (!marcados || marcados.length === 0) {
+        throw new Error('Este cupón ya fue canjeado.')
+      }
 
       // Insertar en historial
-      await supabase.from('historial_premios').insert({
+      const { error: historialError } = await supabase.from('historial_premios').insert({
         cliente_id: cliente.id,
         admin_id: admin.id,
         cupon_id: cuponId,
         puntos_al_canjear: cliente.puntos
       })
+      if (historialError) console.error('No se pudo guardar el historial del premio:', historialError)
 
-      // Si es el corte gratis (visita {{PUNTOS_META}}), resetear puntos
-      if (tipo === 'producto_gratis') {
-        const { data: clienteActualizado } = await supabase
+      // Premio final de la vuelta (hito en la meta): la tarjeta vuelve a 0
+      if (visitaRequerida >= PUNTOS_META) {
+        const { data: clienteActualizado, error: resetError } = await supabase
           .from('clientes')
           .update({ puntos: 0 })
           .eq('id', cliente.id)
           .select()
           .single()
 
+        if (resetError) throw resetError
         setCliente(clienteActualizado || { ...cliente, puntos: 0 })
       }
 
@@ -476,7 +531,9 @@ export default function ScanPage() {
     )
   }
 
-  const circulos = Array.from({ length: PUNTOS_META }, (_, i) => i < cliente.puntos)
+  const puntosVuelta = Math.min(cliente.puntos, PUNTOS_META)
+  const tarjetaBloqueada = cliente.puntos >= PUNTOS_META && tienePremioFinalPendiente()
+  const circulos = Array.from({ length: PUNTOS_META }, (_, i) => i < puntosVuelta)
 
   return (
     <div className="min-h-screen text-light p-6">
@@ -538,12 +595,18 @@ export default function ScanPage() {
               ))}
             </div>
             <div className="text-center text-sm text-gray-400">
-              {cliente.puntos} / {PUNTOS_META} visitas
+              {puntosVuelta} / {PUNTOS_META} visitas
             </div>
           </div>
 
           {/* Botón Añadir Visita */}
-          {cliente.puntos < PUNTOS_META && (
+          {tarjetaBloqueada && (
+            <div className="rounded-lg border border-secondary p-4 mb-4 text-center font-bold">
+              🏆 Tarjeta completa: canjea su premio para empezar una nueva vuelta
+            </div>
+          )}
+
+          {!tarjetaBloqueada && (
             <button
               onClick={handleAddVisit}
               disabled={disabled}
@@ -576,7 +639,7 @@ export default function ScanPage() {
                       )}
                     </div>
                     <button
-                      onClick={() => handleCanjearCupon(cc.id, cc.cupon_id, cc.cupones.tipo)}
+                      onClick={() => handleCanjearCupon(cc.id, cc.cupon_id, cc.cupones.visita_requerida)}
                       disabled={disabled}
                       className="w-full bg-green-700 hover:bg-green-600 disabled:bg-gray-700 text-light font-bold py-2 px-4 rounded transition text-sm"
                     >
